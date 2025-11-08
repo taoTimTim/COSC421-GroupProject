@@ -64,10 +64,12 @@
 import mne
 import numpy as np
 import matplotlib.pyplot as plt
+
+
 from mne_connectivity import spectral_connectivity_epochs as spectral_connectivity
 
 # ---- Load & clean ----
-raw = mne.io.read_raw_bdf("sub-001_task-med1breath_eeg.bdf", preload=True)
+raw = mne.io.read_raw_bdf("data/sub-001_task-med1breath_eeg.bdf", preload=True)
 raw.drop_channels(
     ['EXG1','EXG2','EXG3','EXG4','EXG5','EXG6','EXG7','EXG8',
      'GSR1','GSR2','Erg1','Erg2','Resp','Plet','Temp','Status'],
@@ -102,6 +104,7 @@ con_obj = spectral_connectivity(
 
 # ---- Extract dense (channels x channels) matrix ----
 con = con_obj.get_data(output='dense')  # 2D array
+con = np.squeeze(con)                   # shape: (64, 64)
 ch_names = epochs.info['ch_names']
 
 print("wPLI matrix shape:", con.shape)   # (n_channels, n_channels)
@@ -122,9 +125,10 @@ import pandas as pd
 
 # 'con' = your wPLI matrix (channels × channels)
 # 'ch_names' = list of electrode names
+channel_names = raw.info['ch_names']
 
 # Create a DataFrame with labels
-df_wpli = pd.DataFrame(con, index=ch_names, columns=ch_names)
+df_wpli = pd.DataFrame(con, index=channel_names, columns=channel_names)
 
 # Option 1: Print full matrix (can be huge)
 print(df_wpli)

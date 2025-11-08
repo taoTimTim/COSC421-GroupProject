@@ -1,4 +1,6 @@
 mne
 numpy
 matplotlib
-mne-connectivity
+mne_connectivity
+pandas
+

@@ -20,3 +20,12 @@ Install them with:
 pip install -r requirements.txt
 
 If you import a library that requires a new package, add it to requirements.txt
+
+## Running Code
+run in terminal using:
+
+python src/module_name.py
+
+
+## Data 
+Add bdf data to the data folder but should not be commited to gihub. Notes the data folder is in the .gitignore file so don't store data outside of it.
