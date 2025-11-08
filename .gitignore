@@ -2,3 +2,10 @@ env/
 
 # Ignore all contents in the data folder
 data/
+
+alpha_med1breath/results/
+
+# Ignore everything in results
+results/*
+# Except .gitkeep file
+!results/averages/
