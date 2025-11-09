@@ -87,7 +87,7 @@ for fname in os.listdir(data_path):
         channel_names = epochs.ch_names
         df_wpli = pd.DataFrame(con, index=channel_names, columns=channel_names)
         csv_name = fname.replace(".bdf", f"_{band_name}_wpli.csv")
-        df_wpli.to_csv(os.path.join(save_folder, csv_name), index=False)
+        df_wpli.to_csv(os.path.join(save_folder, csv_name))
 
         print(f"    Saved {csv_name} to {save_folder}")
 
