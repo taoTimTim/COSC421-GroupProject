@@ -1,11 +1,14 @@
+# Virtual environment
 env/
 
-# Ignore all contents in the data folder
+# Raw EEG dataset + extracted BDF files
 data/
+bdf_data/
 
-alpha_med1breath/results/
-
-# Ignore everything in results
+# Ignore all results except averaged CSVs
 results/*
-# Except .gitkeep file
 !results/averages/
+!results/averages/**
+
+# Ignore Python cache
+__pycache__/

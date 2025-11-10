@@ -7,7 +7,7 @@ from mne_connectivity import spectral_connectivity_epochs as spectral_connectivi
 
 
 # Configuration
-data_path = "./data"
+data_path = "../bdf_data"
 results_path = "./results"
 os.makedirs(results_path, exist_ok=True)
 
