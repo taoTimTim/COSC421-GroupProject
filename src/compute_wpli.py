@@ -77,7 +77,9 @@ for fname in os.listdir(data_path):
 
         # Extract dense symmetric matrix
         con = np.squeeze(con_obj.get_data(output='dense'))
-        con = (con + con.T) / 2
+        con = (con + con.T) / 2        # symmetrize
+        con[con < 0] = 0               # clip negatives to 0
+
 
         # Create save folder: e.g., results/alpha_med1breath/
         save_folder = os.path.join(results_path, f"{band_name}_{task_name}")
