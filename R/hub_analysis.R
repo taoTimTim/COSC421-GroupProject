@@ -41,14 +41,15 @@ keep_top_density <- function(mat, dens) {
 hub_analysis <- function(mat, name) {
     cat("\nProcessing:", name, "\n")
     
+    # Store electrode names BEFORE any operations
+    electrode_names <- rownames(mat)
+    cat("  Electrodes found:", length(electrode_names), "\n")
+    
     # Apply 15% density thresholding
     mat_15 <- keep_top_density(mat, 0.15)
     
-    # Store electrode names BEFORE any operations
-    electrode_names <- rownames(mat_15)
-    cat("  Electrodes found:", length(electrode_names), "\n")
-    
-    # Ensure matrix has proper dimnames
+    # Restore electrode names (keep_top_density loses them)
+    rownames(mat_15) <- electrode_names
     colnames(mat_15) <- electrode_names
     
     # Convert to graph - handle errors better
