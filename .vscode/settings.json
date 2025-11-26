@@ -1,5 +1,6 @@
 {
   "r.rpath.windows": "C:\\Program Files\\R\\R-4.5.1\\bin\\R.exe",
+  "r.bracketedPaste": true,
   "r.lsp.debug": false,
   "r.lsp.diagnostics": true
 }
