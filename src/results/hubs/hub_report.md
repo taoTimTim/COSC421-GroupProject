@@ -151,12 +151,7 @@ Included visualizations (embedded PNGs regenerated from CSVs):
 
 ![Meditation vs Thinking strength comparison](plots/meditation_vs_thinking_strength.png)
 
-> Note: The plotted figures are embedded as PNGs so the Markdown can be converted directly to a single PDF using Pandoc+LaTeX or another Markdown renderer. If you prefer to use the original PDFs, they remain in `plots/` as well.
+
 
 ---
-
-## Notes & Next Steps
-
-- I included the full `region_summary` table and the six top-5 tables above. If you'd like the full `all_hub_metrics_15pct.csv` table embedded as a collapsible / downloadable file, I can append that.
-- I can also attempt to automatically convert the Markdown to PDF here if you want; I will check for `pandoc` and `pdftoppm` availability and try to produce `hub_report.pdf` and `hub_report_combined.pdf`.
 
