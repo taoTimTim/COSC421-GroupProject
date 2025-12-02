@@ -85,7 +85,7 @@ plot_brain_regions <- function(mat, frontal, posterior, title = "Network") {
     )
 }
 
-plot_fp_edges <- function(mat, frontal, posterior, title="") {
+plot_fp_edges <- function(mat, frontal, posterior, title="", top_prop=0.20) {
 
     channels <- rownames(mat)
 
@@ -93,39 +93,51 @@ plot_fp_edges <- function(mat, frontal, posterior, title="") {
     f_ids <- which(channels %in% frontal)
     p_ids <- which(channels %in% posterior)
 
-    # FP-only matrix
+    # extract FP connections only
+    submat <- mat[f_ids, p_ids, drop=FALSE]
+
+    # vector of all FP weights
+    vals <- as.vector(submat)
+
+    # threshold: keep only strongest X% (similar to what was done in analysis.R)
+    k <- round(length(vals) * top_prop)
+    thr <- sort(vals, decreasing=TRUE)[k]
+
+    # FP-only matrix after threshold
     fp_mat <- matrix(0, nrow(mat), ncol(mat))
     rownames(fp_mat) <- channels
     colnames(fp_mat) <- channels
 
-    fp_mat[f_ids, p_ids] <- mat[f_ids, p_ids]
-    fp_mat[p_ids, f_ids] <- mat[p_ids, f_ids]
+    # keep strong FP edges
+    fp_mat[f_ids, p_ids] <- ifelse(submat >= thr, submat, 0)
+    fp_mat[p_ids, f_ids] <- t(fp_mat[f_ids, p_ids]) # symmetric
 
+    # build graph
     g <- graph_from_adjacency_matrix(fp_mat, mode="undirected", weighted=TRUE)
 
-    # Colors
+    # Node colors
     col <- rep("gray80", length(channels))
-    col[f_ids] <- "blue" # frontal
-    col[p_ids] <- "red" # posterior
+    col[f_ids] <- "dodgerblue3"
+    col[p_ids] <- "firebrick2"
 
+    # Plot (title drawn manually bigger + closer)
     plot(
         g,
         vertex.color = col,
         vertex.size = 6,
         vertex.label = NA,
-        edge.width = sqrt(E(g)$weight) * 4,
+        edge.width = sqrt(E(g)$weight) * 5,
         edge.color = "purple",
         layout = layout_in_circle,
         main = ""
     )
 
-    title (
-        title,
-        cex.main = 2.8,
-        font.main = 2,
-        line = -2
-    )
+    title(title, cex.main=2.8, font.main=2, line=0.5)
 }
+
+
+# code to get png un-thresholded
+png("fp_connectivity_6panel_pretty1.png", width=3000, height=2000, res=250)
 
 # Layout: 2 rows, 3 columns
 par(mfrow=c(2,3))
@@ -141,3 +153,19 @@ for (name in names(paths)) {
     plot_fp_edges(mat, frontal, posterior, title=name)
 }
 
+dev.off()
+
+
+# code to get png2 thresholded
+png("fp_connectivity_6panel_pretty2.png", width=3000, height=2000, res=250)
+
+par(mfrow=c(2,3))
+par(mar=c(1,1,2,1))
+par(oma=c(0,0,0,0))
+
+for (name in names(paths)) {
+    mat <- load_matrix(paths[[name]])
+    plot_fp_edges(mat, frontal, posterior, title=name, top_prop=0.20)
+}
+
+dev.off()
