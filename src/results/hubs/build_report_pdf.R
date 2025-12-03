@@ -17,10 +17,11 @@ library(png)
 library(grid)
 
 pdf(out_pdf, width=11, height=8.5)
+on.exit(dev.off(), add = TRUE)
 
 # Title page
 plot.new()
-title(main = "Hub Electrode Analysis — Research Question 1", cex.main = 1.6)
+title(main = "Hub Electrode Analysis - Research Question 1", cex.main = 1.6)
 text(x=0.5, y=0.6, labels = paste("Generated:", Sys.Date()), cex=1.0)
 text(x=0.5, y=0.5, labels = "Source: src/results/hubs/", cex=0.9)
 
