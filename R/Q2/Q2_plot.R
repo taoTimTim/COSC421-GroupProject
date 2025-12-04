@@ -132,7 +132,7 @@ save_plot_condition <- function(condition, prefix = "", width = 7, height = 6, d
   filename_png <- paste0(safe_prefix, condition, ".png") #getting the png file of the graph 
   filename_pdf <- paste0(safe_prefix, condition, ".pdf")
   
-  ggsave(filename_png, p, width = width, height = height, dpi = dpi)
+  ggsave(filename_png, p, width = width, height = height, dpi = dpi, bg = "white")
   ggsave(filename_pdf, p, width = width, height = height)
   
   message("Saved: ", filename_png, " and ", filename_pdf)
@@ -142,9 +142,9 @@ save_plot_condition <- function(condition, prefix = "", width = 7, height = 6, d
 #save all plots
 
 save_plot_condition("alpha_med1", "Alpha_")
-#save_plot_condition("alpha_med2", "Alpha_")
-#save_plot_condition("alpha_thinking", "Alpha_")
+save_plot_condition("alpha_med2", "Alpha_")
+save_plot_condition("alpha_thinking", "Alpha_")
 
-#save_plot_condition("beta_med1", "Beta_")
-#save_plot_condition("beta_med2", "Beta_")
-#save_plot_condition("beta_thinking", "Beta_")
+save_plot_condition("beta_med1", "Beta_")
+save_plot_condition("beta_med2", "Beta_")
+save_plot_condition("beta_thinking", "Beta_")
