@@ -25,20 +25,45 @@ paths <- list(
     beta_thinking = "src/results/averages/beta_thinking/beta_thinking_wpli_average_sub1-2.csv"
 )
 
-# compute the frontal-posterior connectivity
-# NOTE: this calculation uses the raw, unthresholded matrix from the .csv file
-fp_connectivity <- function(mat, frontal, posterior) {
-    channels <- rownames(mat)
 
-    frontal_ids <- which(channels %in% frontal)
-    posterior_ids <- which(channels %in% posterior)
+keep_top_density <- function(mat, dens) {
+    diag(mat) <- 0
+    mat[is.na(mat)] <- 0
+    mat <- (mat + t(mat)) / 2
 
-    # slice the matrix for these connections only, get rid of noise
-    submat <- mat[frontal_ids, posterior_ids, drop = FALSE]
+    n <- nrow(mat)
+    max_edges <- n * (n - 1) / 2
+    k <- round(dens * max_edges)
 
-    return(mean(submat, na.rm = TRUE))
+    ut <- mat[upper.tri(mat)]
+    thr <- sort(ut, decreasing = TRUE)[k]
+
+    mat_thr <- matrix(0, n, n)
+    mat_thr[mat >= thr] <- mat[mat >= thr]
+    diag(mat_thr) <- 0
+    return(mat_thr)
 }
 
+# compute the frontal-posterior connectivity
+fp_connectivity <- function(mat, frontal, posterior, densities = c(0.1, 0.15, 0.2, 0.25)) {
+    fp_vals <- c()
+
+    for (d in densities) {
+        mat_d <- keep_top_density(mat, d)
+
+        channels <- rownames(mat_d)
+        f_ids <- which(channels %in% frontal)
+        p_ids <- which(channels %in% posterior)
+
+        submat <- mat_d[f_ids, p_ids, drop = FALSE]
+
+        val <- mean(submat[submat > 0], na.rm = TRUE)
+        if (is.nan(val)) val <- 0
+        fp_vals <- c(fp_vals, val)
+    }
+
+    return(mean(fp_vals, na.rm = TRUE))
+}
 
 # run code for all groups
 results <- data.frame(
