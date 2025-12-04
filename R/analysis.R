@@ -1,27 +1,12 @@
-# This script loads wpli matrices and turns them into brain networks.
-# eeg gives fully connected matrices, so we need to remove weak edges or it's just noise
-# Instead of picking one cutoff, we test multiple densities (10%, 15%, 20%, 25%).
-# For each density we keep the strongest edges, build the graph, and get metrics,
-# then we average the metrics so we're not relying on one arbitrary threshold (so the data is less likely to be skewed).
-# this is standard in connectivity research and keeps things fair between edges
-# Here are the metrics we care about (based on the project proposal): strength, clustering, modularity, betweenness
 
-# 15% graph is used for the plots because it looks clean(ish) and still shows the structure
 
-# Quick note on the "multiple densities" thing:
-# Instead of picking one % of edges to keep (like only the top 5%), we try a few levels (10%, 15%, 20%, 25%)
-# This lets us see if the results are consistent no matterwhat the cutoff is (cutoff for which edges we don't use/aren't good eough)
-# If we only used one %, our data might be skewed and think there's an effect when it's just the threshold, so averaging across several thresholds
-# makes the results way more reliable
 
 
 library(igraph)
 
-# load matrix from csv
 load_matrix <- function(path) {
     df <- read.csv(path, header = TRUE, check.names = FALSE)
     
-    # First column is channel labels, set row names
     rownames(df) <- df[,1]
     df <- df[,-1]
 
@@ -31,7 +16,6 @@ load_matrix <- function(path) {
     return(mat)
 }
 
-# network metrics
 network_metrics <- function(g) {
     data.frame(
         nodes = gorder(g),
@@ -44,7 +28,6 @@ network_metrics <- function(g) {
     )
 }
 
-# keep top x% edges (density thresholding)
 keep_top_density <- function(mat, dens) {
     diag(mat) <- 0
     mat[is.na(mat)] <- 0
@@ -65,7 +48,6 @@ keep_top_density <- function(mat, dens) {
 
 densities <- c(0.10, 0.15, 0.20, 0.25)
 
-# file paths
 paths <- list(
     alpha_med1     = "src/results/averages/alpha_med1breath/alpha_med1breath_wpli_average_sub1-2.csv",
     alpha_med2     = "src/results/averages/alpha_med2/alpha_med2_wpli_average_sub1-2.csv",
@@ -75,7 +57,6 @@ paths <- list(
     beta_thinking  = "src/results/averages/beta_thinking/beta_thinking_wpli_average_sub1-2.csv"
 )
 
-# load and build graphs
 mats <- lapply(paths, load_matrix)
 
 final_results <- list()
@@ -98,10 +79,8 @@ for (name in names(mats)) {
     print(round(avg, 4))
 }
 
-# plot all graphs in a simple layout
 par(mfrow = c(2,3))
 
-# plot network at 15% density
 par(mfrow = c(2,3))
 for (name in names(mats)) {
     mat_15 <- keep_top_density(mats[[name]], 0.15)

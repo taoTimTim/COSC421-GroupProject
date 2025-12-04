@@ -1,7 +1,4 @@
-# Regenerate PNG plots from CSV outputs
-# Produces: top5_hubs_per_condition.png, hub_region_distribution.png, meditation_vs_thinking_strength.png
 
-# Read top5 CSVs
 top5_dir <- "src/results/hubs/top5"
 top5_files <- list.files(top5_dir, pattern = "top5_.*\\.csv$", full.names = TRUE)
 
@@ -12,7 +9,6 @@ for (f in top5_files) {
   top5_list[[name]] <- df
 }
 
-# 1) Top 5 hubs per condition (2x3)
 png("src/results/hubs/plots/top5_hubs_per_condition.png", width = 1400, height = 1000, res = 150)
 par(mfrow = c(2,3), mar = c(8,4,4,2))
 for (n in names(top5_list)) {
@@ -30,14 +26,11 @@ for (n in names(top5_list)) {
 }
 dev.off()
 
-# 2) Hub region distribution (alpha and beta side-by-side)
 region_summary <- read.csv("src/results/hubs/region_summary.csv", stringsAsFactors = FALSE)
 regions <- unique(region_summary$region)
-# Ensure consistent ordering
 regions_order <- c("frontal","central","parietal","occipital","temporal","other")
 regions <- regions_order[regions_order %in% regions]
 
-# Build matrices for alpha and beta with rows = states (meditation, thinking), cols = regions
 make_mat <- function(band) {
   dat <- region_summary[region_summary$band == band, ]
   states <- c("meditation", "thinking")
@@ -56,9 +49,7 @@ make_mat <- function(band) {
   return(m)
 }
 
-# But region_summary may not have 'count' column (it had hub_count). Try both
 if ("count" %in% names(region_summary)) {
-  # nothing
 } else if ("hub_count" %in% names(region_summary)) {
   names(region_summary)[names(region_summary) == "hub_count"] <- "count"
 }
@@ -74,12 +65,10 @@ barplot(beta_mat, beside = TRUE, col = c("red","blue"), main = "Beta Band: Hub D
 legend("topright", legend = rownames(beta_mat), fill = c("red","blue"))
 dev.off()
 
-# 3) Meditation vs Thinking strength comparison (top10 each)
 all_hubs <- read.csv("src/results/hubs/all_hub_metrics_multi_density.csv", stringsAsFactors = FALSE)
 
 png("src/results/hubs/plots/meditation_vs_thinking_strength.png", width = 1200, height = 600, res = 150)
 par(mfrow = c(1,2), mar = c(8,4,4,2))
-# Alpha
 alpha_med <- subset(all_hubs, band == "alpha" & state == "meditation")[order(-all_hubs$strength[all_hubs$band=="alpha" & all_hubs$state=="meditation"]), ]
 alpha_med <- head(alpha_med, 10)
 alpha_think <- subset(all_hubs, band == "alpha" & state == "thinking")[order(-all_hubs$strength[all_hubs$band=="alpha" & all_hubs$state=="thinking"]), ]
@@ -91,7 +80,6 @@ if (nrow(alpha_med) > 0 && nrow(alpha_think) > 0) {
   plot.new(); title(main = "Alpha: insufficient data")
 }
 
-# Beta
 beta_med <- subset(all_hubs, band == "beta" & state == "meditation")[order(-all_hubs$strength[all_hubs$band=="beta" & all_hubs$state=="meditation"]), ]
 beta_med <- head(beta_med, 10)
 beta_think <- subset(all_hubs, band == "beta" & state == "thinking")[order(-all_hubs$strength[all_hubs$band=="beta" & all_hubs$state=="thinking"]), ]
