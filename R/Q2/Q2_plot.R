@@ -81,18 +81,14 @@ build_avg_graph <- function(condition) {
   
   W_avg <- Reduce("+", W_list) / length(densities)
   
-  g <- graph_from_adjacency_matrix(W_avg,
-                                   mode = "undirected",
-                                   weighted = TRUE,
-                                   diag = FALSE)
+  g <- graph_from_adjacency_matrix(W_avg, mode = "undirected", weighted = TRUE, diag = FALSE)
   
   V(g)$name <- labels
   V(g)$x <- coords$x
   V(g)$y <- coords$y
   
   # clustering coefficient
-  cl <- suppressWarnings(transitivity(g, type = "localundirected",
-                                      weights = E(g)$weight))
+  cl <- suppressWarnings(transitivity(g, type = "localundirected", weights = E(g)$weight))
   cl[is.na(cl)] <- 0
   V(g)$clust <- cl
   
