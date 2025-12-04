@@ -21,6 +21,7 @@ __pycache__/
 # Ignore generated hub analysis outputs (CSV, PDFs, PNGs)
 /src/results/hubs/hub_report_combined.pdf
 /src/results/hubs/all_hub_metrics_15pct.csv
+/src/results/hubs/all_hub_metrics_multi_density.csv
 /src/results/hubs/region_summary.csv
 /src/results/hubs/*.png
 /src/results/hubs/*.pdf

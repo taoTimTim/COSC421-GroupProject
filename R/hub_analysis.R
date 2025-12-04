@@ -1,17 +1,16 @@
 # Hub Electrode Analysis
 # Research Question 1: Which electrodes act as hubs during meditation compared to thinking?
 # This script identifies hub electrodes using degree, strength, and betweenness centrality
+# averaged across multiple density thresholds (10%, 15%, 20%, 25%).
 
 library(igraph)
+library(dplyr)
 
 # load matrix from csv
 load_matrix <- function(path) {
     df <- read.csv(path, header = TRUE, check.names = FALSE)
-    
-    # First column is channel labels, set row names
     rownames(df) <- df[,1]
     df <- df[,-1]
-
     mat <- as.matrix(df)
     mat <- apply(mat, 2, as.numeric)
     rownames(mat) <- rownames(df)
@@ -26,7 +25,7 @@ keep_top_density <- function(mat, dens) {
 
     n <- nrow(mat)
     max_edges <- n * (n - 1) / 2
-    k <- round(dens * max_edges)
+    k <- max(1, round(dens * max_edges))
 
     ut <- mat[upper.tri(mat)]
     thr <- sort(ut, decreasing = TRUE)[k]
@@ -37,61 +36,62 @@ keep_top_density <- function(mat, dens) {
     return(mat_thr)
 }
 
-# Hub analysis function - compute centrality measures at 15% density
+densities <- c(0.10, 0.15, 0.20, 0.25)
+
+# Hub analysis function - compute centrality measures averaged across densities
 hub_analysis <- function(mat, name) {
     cat("\nProcessing:", name, "\n")
-    
-    # Store electrode names BEFORE any operations
+
     electrode_names <- rownames(mat)
     cat("  Electrodes found:", length(electrode_names), "\n")
-    
-    # Apply 15% density thresholding
-    mat_15 <- keep_top_density(mat, 0.15)
-    
-    # Restore electrode names (keep_top_density loses them)
-    rownames(mat_15) <- electrode_names
-    colnames(mat_15) <- electrode_names
-    
-    # Convert to graph - handle errors better
-    g_15 <- tryCatch({
-        graph_from_adjacency_matrix(mat_15, mode="undirected", weighted=TRUE, diag=FALSE)
-    }, error = function(e) {
-        cat("  ERROR creating graph:", e$message, "\n")
-        return(NULL)
-    })
-    
-    # Check if graph creation failed
-    if (is.null(g_15)) {
-        cat("  Failed to create graph!\n")
+
+    density_metrics <- list()
+    for (d in densities) {
+        cat("  Applying density:", d * 100, "%\n")
+        mat_d <- keep_top_density(mat, d)
+        rownames(mat_d) <- electrode_names
+        colnames(mat_d) <- electrode_names
+
+        g_d <- tryCatch({
+            graph_from_adjacency_matrix(mat_d, mode = "undirected", weighted = TRUE, diag = FALSE)
+        }, error = function(e) {
+            cat("    ERROR creating graph at density", d, ":", e$message, "\n")
+            return(NULL)
+        })
+
+        if (is.null(g_d)) next
+
+        density_metrics[[as.character(d)]] <- list(
+            degree = degree(g_d),
+            strength = strength(g_d, weights = E(g_d)$weight),
+            betweenness = betweenness(g_d, normalized = TRUE)
+        )
+    }
+
+    if (length(density_metrics) == 0) {
+        cat("  Failed to create graphs at all densities!\n")
         return(NULL)
     }
-    
-    # Get vertex count
-    cat("  Graph vertices:", length(V(g_15)), "\n")
-    
-    # Calculate centrality measures
-    degree_cent <- degree(g_15)
-    strength_cent <- strength(g_15, weights = E(g_15)$weight)
-    betweenness_cent <- betweenness(g_15, normalized = TRUE)
-    
-    cat("  Degree values:", length(degree_cent), "\n")
-    cat("  Strength values:", length(strength_cent), "\n")
-    
-    # Create hub dataframe using the stored electrode names (not vertex names)
+
+    cat("  Densities included:", paste(names(density_metrics), collapse = ", "), "\n")
+
+    combine_metric <- function(metric_name) {
+        mat_metric <- do.call(cbind, lapply(density_metrics, function(m) m[[metric_name]]))
+        rowMeans(mat_metric, na.rm = TRUE)
+    }
+
     hub_df <- data.frame(
         electrode = electrode_names,
-        degree = as.numeric(degree_cent),
-        strength = as.numeric(strength_cent),
-        betweenness = as.numeric(betweenness_cent),
+        degree = as.numeric(combine_metric("degree")),
+        strength = as.numeric(combine_metric("strength")),
+        betweenness = as.numeric(combine_metric("betweenness")),
         stringsAsFactors = FALSE
     )
-    
-    # Sort by strength
+
     hub_df <- hub_df[order(hub_df$strength, decreasing = TRUE), ]
     rownames(hub_df) <- NULL
-    
+
     cat("  Created hub dataframe with", nrow(hub_df), "rows\n")
-    
     return(hub_df)
 }
 
@@ -112,14 +112,14 @@ for (path_name in names(paths)) {
     tryCatch({
         cat("Loading:", path_name, "from", paths[[path_name]], "\n")
         mats[[path_name]] <- load_matrix(paths[[path_name]])
-        cat("  ✓ Success - dimensions:", dim(mats[[path_name]]), "\n")
+        cat("  Success - dimensions:", dim(mats[[path_name]]), "\n")
     }, error = function(e) {
-        cat("  ✗ ERROR loading", path_name, ":", e$message, "\n")
+        cat("  ERROR loading", path_name, ":", e$message, "\n")
     })
 }
 
 # ===== COMPUTE HUBS FOR ALL CONDITIONS =====
-cat("\n===== HUB ELECTRODES ANALYSIS (15% DENSITY) =====\n")
+cat("\n===== HUB ELECTRODES ANALYSIS (AVERAGED ACROSS 10%, 15%, 20%, 25%) =====\n")
 
 hubs_by_condition <- list()
 
@@ -128,19 +128,19 @@ for (name in names(mats)) {
     result <- tryCatch({
         hub_analysis(mats[[name]], name)
     }, error = function(e) {
-        cat("  ✗ CRITICAL ERROR in hub_analysis():", e$message, "\n")
+        cat("  CRITICAL ERROR in hub_analysis():", e$message, "\n")
         cat("     Stack trace:", paste(e$call), "\n")
         return(NULL)
     })
-    
+
     hubs_by_condition[[name]] <- result
-    
+
     if (!is.null(result)) {
-        cat("✓ Successfully created hub dataframe for", name, "\n")
+        cat("Successfully created hub dataframe for", name, "\n")
         cat("\n", name, " - Top 10 Hub Electrodes:\n")
         print(head(result, 10))
     } else {
-        cat("✗ FAILED to create hub dataframe for", name, "\n")
+        cat("FAILED to create hub dataframe for", name, "\n")
     }
 }
 
@@ -165,60 +165,41 @@ print(head(hubs_by_condition$beta_med2, 5))
 # ===== 1. SAVE ALL HUB RESULTS INTO A SINGLE CSV =====
 cat("\n\n===== SAVING HUB RESULTS =====\n")
 
-# Check if we have any valid hub data
 valid_hubs <- sum(!sapply(hubs_by_condition, is.null))
 cat("Valid hub dataframes:", valid_hubs, "/", length(hubs_by_condition), "\n")
 
 if (valid_hubs == 0) {
-    cat("✗ ERROR: No valid hub dataframes to combine!\n")
+    cat("ERROR: No valid hub dataframes to combine!\n")
     stop("Cannot proceed without hub data")
 }
 
-# Create results directory if it doesn't exist
-tryCatch({
-    dir.create("src/results/hubs", recursive = TRUE, showWarnings = FALSE)
-    cat("✓ Created directory: src/results/hubs\n")
-}, error = function(e) {
-    cat("✗ ERROR creating directory:", e$message, "\n")
-})
+dir.create("src/results/hubs", recursive = TRUE, showWarnings = FALSE)
 
-# Combine all hub data into one table - using do.call with rbind properly
-tryCatch({
-    all_hubs_list <- lapply(names(hubs_by_condition), function(n) {
-        df <- hubs_by_condition[[n]]
-        if (is.null(df)) {
-            cat("  Skipping NULL dataframe:", n, "\n")
-            return(NULL)
-        }
-        df$condition <- n
-        return(df)
-    })
-    
-    # Remove NULL entries
-    all_hubs_list <- all_hubs_list[!sapply(all_hubs_list, is.null)]
-    
-    if (length(all_hubs_list) == 0) {
-        stop("No valid dataframes to combine after filtering NULLs")
+all_hubs_list <- lapply(names(hubs_by_condition), function(n) {
+    df <- hubs_by_condition[[n]]
+    if (is.null(df)) {
+        cat("  Skipping NULL dataframe:", n, "\n")
+        return(NULL)
     }
-    
-    all_hubs <- do.call("rbind", all_hubs_list)
-    rownames(all_hubs) <- NULL
-    
-    cat("✓ Combined hub data:", nrow(all_hubs), "total rows\n")
-    cat("  Conditions included:", paste(unique(all_hubs$condition), collapse=", "), "\n")
-}, error = function(e) {
-    cat("✗ ERROR combining hub data:", e$message, "\n")
-    stop("Cannot continue without combined hub data")
+    df$condition <- n
+    return(df)
 })
+all_hubs_list <- all_hubs_list[!sapply(all_hubs_list, is.null)]
+
+if (length(all_hubs_list) == 0) {
+    stop("No valid dataframes to combine after filtering NULLs")
+}
+
+all_hubs <- do.call("rbind", all_hubs_list)
+rownames(all_hubs) <- NULL
+
+cat("Combined hub data:", nrow(all_hubs), "total rows\n")
+cat("  Conditions included:", paste(unique(all_hubs$condition), collapse = ", "), "\n")
 
 # ===== 2. ADD BAND AND STATE LABELS =====
-tryCatch({
-    all_hubs$band <- ifelse(grepl("alpha", all_hubs$condition), "alpha", "beta")
-    all_hubs$state <- ifelse(grepl("thinking", all_hubs$condition), "thinking", "meditation")
-    cat("✓ Added band and state labels\n")
-}, error = function(e) {
-    cat("✗ ERROR adding labels:", e$message, "\n")
-})
+all_hubs$band <- ifelse(grepl("alpha", all_hubs$condition), "alpha", "beta")
+all_hubs$state <- ifelse(grepl("thinking", all_hubs$condition), "thinking", "meditation")
+cat("Added band and state labels\n")
 
 # ===== 3. ADD ELECTRODE REGION LABELS =====
 region_map <- list(
@@ -236,23 +217,17 @@ get_region <- function(elec) {
     return("other")
 }
 
-tryCatch({
-    all_hubs$region <- sapply(all_hubs$electrode, get_region)
-    cat("✓ Added electrode region labels\n")
-    cat("  Regions found:", paste(unique(all_hubs$region), collapse=", "), "\n")
-}, error = function(e) {
-    cat("✗ ERROR adding regions:", e$message, "\n")
-})
+all_hubs$region <- sapply(all_hubs$electrode, get_region)
+cat("Added electrode region labels\n")
+cat("  Regions found:", paste(unique(all_hubs$region), collapse = ", "), "\n")
 
 # Save combined hub table
-tryCatch({
-    write.csv(all_hubs,
-              "src/results/hubs/all_hub_metrics_15pct.csv",
-              row.names = FALSE)
-    cat("✓ Saved: all_hub_metrics_15pct.csv\n")
-}, error = function(e) {
-    cat("✗ ERROR saving all_hub_metrics_15pct.csv:", e$message, "\n")
-})
+write.csv(
+    all_hubs,
+    "src/results/hubs/all_hub_metrics_multi_density.csv",
+    row.names = FALSE
+)
+cat("Saved: all_hub_metrics_multi_density.csv\n")
 
 # ===== 4. EXPORT TOP 5 HUBS PER CONDITION =====
 cat("\n===== EXPORTING TOP 5 HUBS =====\n")
@@ -274,162 +249,136 @@ for (name in names(hubs_by_condition)) {
 
 dir.create("src/results/hubs/top5", recursive = TRUE, showWarnings = FALSE)
 
-tryCatch({
-    for (name in names(top5_list)) {
-        if (!is.null(top5_list[[name]])) {
-            write.csv(top5_list[[name]],
-                      paste0("src/results/hubs/top5/top5_", name, ".csv"),
-                      row.names = FALSE)
-        }
+for (name in names(top5_list)) {
+    if (!is.null(top5_list[[name]])) {
+        write.csv(
+            top5_list[[name]],
+            paste0("src/results/hubs/top5/top5_", name, ".csv"),
+            row.names = FALSE
+        )
     }
-    cat("✓ Saved: top5_*.csv for each condition\n")
-}, error = function(e) {
-    cat("✗ ERROR saving top5 CSVs:", e$message, "\n")
-})
+}
+cat("Saved: top5_*.csv for each condition\n")
 
 # ===== 5. REGION SUMMARY ANALYSIS =====
 cat("\n===== REGION SUMMARY ANALYSIS =====\n")
 
-tryCatch({
-    library(dplyr)
-    cat("✓ dplyr library loaded\n")
-}, error = function(e) {
-    cat("✗ ERROR loading dplyr:", e$message, "\n")
-    stop("Cannot proceed without dplyr")
-})
+region_summary <- all_hubs %>%
+    group_by(band, state, region) %>%
+    summarise(
+        avg_strength = mean(strength, na.rm = TRUE),
+        avg_degree = mean(degree, na.rm = TRUE),
+        avg_betweenness = mean(betweenness, na.rm = TRUE),
+        hub_count = n(),
+        .groups = "drop"
+    ) %>%
+    arrange(band, state, -avg_strength)
 
-tryCatch({
-    region_summary <- all_hubs %>%
-        group_by(band, state, region) %>%
-        summarise(
-            avg_strength = mean(strength, na.rm = TRUE),
-            avg_degree = mean(degree, na.rm = TRUE),
-            avg_betweenness = mean(betweenness, na.rm = TRUE),
-            hub_count = n(),
-            .groups = 'drop'
-        ) %>%
-        arrange(band, state, -avg_strength)
-    
-    cat("✓ Created region summary\n")
-    cat("  Summary rows:", nrow(region_summary), "\n")
-    
-    write.csv(region_summary,
-              "src/results/hubs/region_summary.csv",
-              row.names = FALSE)
-    
-    cat("✓ Saved: region_summary.csv\n")
-    cat("\nRegion Summary:\n")
-    print(region_summary)
-}, error = function(e) {
-    cat("✗ ERROR creating region summary:", e$message, "\n")
-})
+cat("Created region summary\n")
+cat("  Summary rows:", nrow(region_summary), "\n")
+
+write.csv(region_summary, "src/results/hubs/region_summary.csv", row.names = FALSE)
+cat("Saved: region_summary.csv\n")
+cat("\nRegion Summary:\n")
+print(region_summary)
 
 # ===== 6. VISUALIZATIONS =====
 cat("\n===== GENERATING VISUALIZATIONS =====\n")
 
-# Create output directory for plots
 dir.create("src/results/hubs/plots", recursive = TRUE, showWarnings = FALSE)
 
 # Plot 1: Top 5 hubs per condition (strength barplot)
-tryCatch({
-    pdf("src/results/hubs/plots/top5_hubs_per_condition.pdf", width = 14, height = 10)
-    par(mfrow = c(2, 3))
-    
-    for (name in names(top5_list)) {
-        df <- top5_list[[name]]
-        if (!is.null(df)) {
-            barplot(df$strength,
-                    names.arg = df$electrode,
-                    main = paste("Top 5 Hubs:", name),
-                    ylab = "Strength",
-                    col = "steelblue",
-                    las = 2)
-        }
+pdf("src/results/hubs/plots/top5_hubs_per_condition.pdf", width = 14, height = 10)
+par(mfrow = c(2, 3))
+for (name in names(top5_list)) {
+    df <- top5_list[[name]]
+    if (!is.null(df)) {
+        barplot(
+            df$strength,
+            names.arg = df$electrode,
+            main = paste("Top 5 Hubs:", name),
+            ylab = "Strength",
+            col = "steelblue",
+            las = 2
+        )
     }
-    
-    dev.off()
-    cat("✓ Saved: top5_hubs_per_condition.pdf\n")
-}, error = function(e) {
-    cat("✗ ERROR creating top5_hubs_per_condition.pdf:", e$message, "\n")
-})
+}
+dev.off()
+cat("Saved: top5_hubs_per_condition.pdf\n")
 
 # Plot 2: Region distribution of hubs
-tryCatch({
-    pdf("src/results/hubs/plots/hub_region_distribution.pdf", width = 10, height = 6)
-    
-    region_counts <- all_hubs %>%
-        group_by(band, state, region) %>%
-        summarise(count = n(), .groups = 'drop')
-    
-    par(mfrow = c(1, 2))
-    
-    # Alpha band
-    alpha_data <- region_counts %>% filter(band == "alpha")
-    if (nrow(alpha_data) > 0) {
-        plot(alpha_data$region, alpha_data$count,
-             main = "Alpha Band: Hub Distribution by Region",
-             xlab = "Region", ylab = "Number of Hub Electrodes",
-             type = "h", lwd = 3, col = c("red", "blue")[as.factor(alpha_data$state)])
+pdf("src/results/hubs/plots/hub_region_distribution.pdf", width = 10, height = 6)
+region_counts <- all_hubs %>%
+    group_by(band, state, region) %>%
+    summarise(count = n(), .groups = "drop")
+regions_order <- c("frontal","central","parietal","occipital","temporal","other")
+
+make_mat <- function(band_label) {
+    dat <- region_counts %>% filter(band == band_label)
+    regions <- regions_order[regions_order %in% dat$region]
+    states <- c("meditation", "thinking")
+    m <- matrix(0, nrow = length(states), ncol = length(regions))
+    rownames(m) <- states
+    colnames(m) <- regions
+    for (i in seq_along(states)) {
+        s <- states[i]
+        for (j in seq_along(regions)) {
+            r <- regions[j]
+            v <- dat$count[dat$state == s & dat$region == r]
+            if (length(v) == 0) v <- 0
+            m[i, j] <- v
+        }
     }
-    
-    # Beta band
-    beta_data <- region_counts %>% filter(band == "beta")
-    if (nrow(beta_data) > 0) {
-        plot(beta_data$region, beta_data$count,
-             main = "Beta Band: Hub Distribution by Region",
-             xlab = "Region", ylab = "Number of Hub Electrodes",
-             type = "h", lwd = 3, col = c("red", "blue")[as.factor(beta_data$state)])
-    }
-    
-    dev.off()
-    cat("✓ Saved: hub_region_distribution.pdf\n")
-}, error = function(e) {
-    cat("✗ ERROR creating hub_region_distribution.pdf:", e$message, "\n")
-})
+    return(m)
+}
+
+alpha_mat <- make_mat("alpha")
+beta_mat <- make_mat("beta")
+
+par(mfrow = c(1, 2))
+barplot(alpha_mat, beside = TRUE, col = c("red","blue"),
+        main = "Alpha Band: Hub Distribution by Region",
+        ylab = "Number of Hub Electrodes", las = 2)
+legend("topright", legend = rownames(alpha_mat), fill = c("red","blue"))
+barplot(beta_mat, beside = TRUE, col = c("red","blue"),
+        main = "Beta Band: Hub Distribution by Region",
+        ylab = "Number of Hub Electrodes", las = 2)
+legend("topright", legend = rownames(beta_mat), fill = c("red","blue"))
+dev.off()
+cat("Saved: hub_region_distribution.pdf\n")
 
 # Plot 3: Strength comparison - Meditation vs Thinking
-tryCatch({
-    pdf("src/results/hubs/plots/meditation_vs_thinking_strength.pdf", width = 12, height = 6)
-    par(mfrow = c(1, 2))
-    
-    # Alpha
-    alpha_med <- all_hubs %>% filter(band == "alpha", state == "meditation") %>% arrange(-strength) %>% head(10)
-    alpha_think <- all_hubs %>% filter(band == "alpha", state == "thinking") %>% arrange(-strength) %>% head(10)
-    
-    if (nrow(alpha_med) > 0 && nrow(alpha_think) > 0) {
-        barplot(c(alpha_med$strength, alpha_think$strength),
-                names.arg = c(alpha_med$electrode, alpha_think$electrode),
-                col = c(rep("steelblue", nrow(alpha_med)), rep("coral", nrow(alpha_think))),
-                main = "Alpha Band: Top 10 Hubs (Meditation vs Thinking)",
-                ylab = "Strength",
-                las = 2)
-        legend("topright", c("Meditation", "Thinking"), fill = c("steelblue", "coral"))
-    }
-    
-    # Beta
-    beta_med <- all_hubs %>% filter(band == "beta", state == "meditation") %>% arrange(-strength) %>% head(10)
-    beta_think <- all_hubs %>% filter(band == "beta", state == "thinking") %>% arrange(-strength) %>% head(10)
-    
-    if (nrow(beta_med) > 0 && nrow(beta_think) > 0) {
-        barplot(c(beta_med$strength, beta_think$strength),
-                names.arg = c(beta_med$electrode, beta_think$electrode),
-                col = c(rep("steelblue", nrow(beta_med)), rep("coral", nrow(beta_think))),
-                main = "Beta Band: Top 10 Hubs (Meditation vs Thinking)",
-                ylab = "Strength",
-                las = 2)
-        legend("topright", c("Meditation", "Thinking"), fill = c("steelblue", "coral"))
-    }
-    
-    dev.off()
-    cat("✓ Saved: meditation_vs_thinking_strength.pdf\n")
-}, error = function(e) {
-    cat("✗ ERROR creating meditation_vs_thinking_strength.pdf:", e$message, "\n")
-})
+pdf("src/results/hubs/plots/meditation_vs_thinking_strength.pdf", width = 12, height = 6)
+par(mfrow = c(1, 2))
+alpha_med <- all_hubs %>% filter(band == "alpha", state == "meditation") %>% arrange(-strength) %>% head(10)
+alpha_think <- all_hubs %>% filter(band == "alpha", state == "thinking") %>% arrange(-strength) %>% head(10)
+beta_med <- all_hubs %>% filter(band == "beta", state == "meditation") %>% arrange(-strength) %>% head(10)
+beta_think <- all_hubs %>% filter(band == "beta", state == "thinking") %>% arrange(-strength) %>% head(10)
+if (nrow(alpha_med) > 0 && nrow(alpha_think) > 0) {
+    barplot(c(alpha_med$strength, alpha_think$strength),
+            names.arg = c(alpha_med$electrode, alpha_think$electrode),
+            col = c(rep("steelblue", nrow(alpha_med)), rep("coral", nrow(alpha_think))),
+            main = "Alpha Band: Top 10 Hubs (Meditation vs Thinking)",
+            ylab = "Strength",
+            las = 2)
+    legend("topright", c("Meditation", "Thinking"), fill = c("steelblue", "coral"))
+}
+if (nrow(beta_med) > 0 && nrow(beta_think) > 0) {
+    barplot(c(beta_med$strength, beta_think$strength),
+            names.arg = c(beta_med$electrode, beta_think$electrode),
+            col = c(rep("steelblue", nrow(beta_med)), rep("coral", nrow(beta_think))),
+            main = "Beta Band: Top 10 Hubs (Meditation vs Thinking)",
+            ylab = "Strength",
+            las = 2)
+    legend("topright", c("Meditation", "Thinking"), fill = c("steelblue", "coral"))
+}
+dev.off()
+cat("Saved: meditation_vs_thinking_strength.pdf\n")
 
 cat("\n===== ALL RESULTS SAVED =====\n")
 cat("Location: src/results/hubs/\n")
 cat("Files created:\n")
-cat("  - all_hub_metrics_15pct.csv (complete table)\n")
+cat("  - all_hub_metrics_multi_density.csv (complete table)\n")
 cat("  - top5/*.csv (top 5 hubs per condition)\n")
 cat("  - region_summary.csv (region statistics)\n")
 cat("  - plots/ (PDF visualizations)\n")

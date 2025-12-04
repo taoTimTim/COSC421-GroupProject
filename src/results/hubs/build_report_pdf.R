@@ -31,7 +31,7 @@ summary_text <- c(
   "Summary:",
   "This report summarizes the hub electrode analysis comparing meditation and thinking states for Alpha and Beta bands.",
   "Centrality measures used: Degree, Strength (weighted), Betweenness (normalized).",
-  "Thresholding for visualization: top 15% strongest edges (proportional density)."
+  "Thresholding: graphs were built at 10%, 15%, 20%, and 25% density; hub metrics were averaged across these levels to reduce single-threshold bias."
 )
 text(x=0, y=1, labels = wrap_lines(paste(summary_text, collapse="\n\n"), width=80), adj = c(0,1), cex=0.9)
 

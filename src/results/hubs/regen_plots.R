@@ -75,7 +75,7 @@ legend("topright", legend = rownames(beta_mat), fill = c("red","blue"))
 dev.off()
 
 # 3) Meditation vs Thinking strength comparison (top10 each)
-all_hubs <- read.csv("src/results/hubs/all_hub_metrics_15pct.csv", stringsAsFactors = FALSE)
+all_hubs <- read.csv("src/results/hubs/all_hub_metrics_multi_density.csv", stringsAsFactors = FALSE)
 
 png("src/results/hubs/plots/meditation_vs_thinking_strength.png", width = 1200, height = 600, res = 150)
 par(mfrow = c(1,2), mar = c(8,4,4,2))
