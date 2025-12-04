@@ -30,6 +30,8 @@ __pycache__/
 /src/results/hubs/hub_report.md
 /src/results/hubs/build_report_pdf.R
 /src/results/hubs/regen_plots.R
+/R/plot_networks_15.R
+/figures/*.png
 
 # VS Code workspace settings (keep repo clean of local config)
 .vscode/
