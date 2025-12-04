@@ -33,49 +33,39 @@ densities <- c(0.10, 0.15, 0.20, 0.25)
 
 hub_analysis <- function(mat, name) {
     cat("\nProcessing:", name, "\n")
-
     electrode_names <- rownames(mat)
-    cat("  Electrodes found:", length(electrode_names), "\n")
-
-    density_metrics <- list()
+    cat("  electrodes:", length(electrode_names), "\n")
+    dm <- list()
     for (d in densities) {
-        cat("  Applying density:", d * 100, "%\n")
+        cat("  density:", d * 100, "%\n")
         mat_d <- keep_top_density(mat, d)
         rownames(mat_d) <- electrode_names
         colnames(mat_d) <- electrode_names
-
         g_d <- graph_from_adjacency_matrix(mat_d, mode = "undirected", weighted = TRUE, diag = FALSE)
-
-        density_metrics[[as.character(d)]] <- list(
+        dm[[as.character(d)]] <- list(
             degree = degree(g_d),
             strength = strength(g_d, weights = E(g_d)$weight),
             betweenness = betweenness(g_d, normalized = TRUE)
         )
     }
-
-    if (length(density_metrics) == 0) {
+    if (length(dm) == 0) {
         stop("Failed to create graphs at all densities")
     }
-
-    cat("  Densities included:", paste(names(density_metrics), collapse = ", "), "\n")
-
-    combine_metric <- function(metric_name) {
-        mat_metric <- do.call(cbind, lapply(density_metrics, function(m) m[[metric_name]]))
-        rowMeans(mat_metric, na.rm = TRUE)
+    cat("  densities used:", paste(names(dm), collapse = ", "), "\n")
+    mix_metric <- function(metric_name) {
+        tmp <- do.call(cbind, lapply(dm, function(m) m[[metric_name]]))
+        rowMeans(tmp, na.rm = TRUE)
     }
-
     hub_df <- data.frame(
         electrode = electrode_names,
-        degree = as.numeric(combine_metric("degree")),
-        strength = as.numeric(combine_metric("strength")),
-        betweenness = as.numeric(combine_metric("betweenness")),
+        degree = as.numeric(mix_metric("degree")),
+        strength = as.numeric(mix_metric("strength")),
+        betweenness = as.numeric(mix_metric("betweenness")),
         stringsAsFactors = FALSE
     )
-
     hub_df <- hub_df[order(hub_df$strength, decreasing = TRUE), ]
     rownames(hub_df) <- NULL
-
-    cat("  Created hub dataframe with", nrow(hub_df), "rows\n")
+    cat("  rows:", nrow(hub_df), "\n")
     return(hub_df)
 }
 
