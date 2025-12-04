@@ -1,5 +1,6 @@
 library(igraph)
 
+# load matrix from csv file
 load_matrix <- function(path) {
     df <- read.csv(path, header = TRUE, check.names = FALSE)
     rownames(df) <- df[,1] # first column contains the names
@@ -11,12 +12,15 @@ load_matrix <- function(path) {
     return(mat)
 }
 
+# define the frontal and posterior electrodes (basically figure out whether an electrode is part of the frontal or posterior part of the brain)
 frontal <- c("Fp1","Fp2","AF3","AF4","F3","F4","F7","F8","Fz")
 posterior <- c("P3","P4","P7","P8","Pz","PO3","PO4","O1","O2")
 
+# function to compute average within-
 region_connectivity <- function(mat, region) {
     ids <- which(rownames(mat) %in% region)
     submat <- mat[ids, ids, drop=FALSE]
+    # remove diagonal (self-connections)
     diag(submat) <- 0
     return(mean(submat, na.rm = TRUE))
 }
@@ -29,12 +33,14 @@ paths <- list(
     beta_med2 = "src/results/averages/beta_med2/beta_med2_wpli_average_sub1-2.csv",
     beta_thinking = "src/results/averages/beta_thinking/beta_thinking_wpli_average_sub1-2.csv"
 )
+#create empty data frame to store results
 results <- data.frame(
     Condition = names(paths),
     Frontal_Frontal = NA,
     Posterior_Posterior = NA
 )
 
+# compute within-region connectivity for each condition
 for (i in seq_along(paths)) {
     mat <- load_matrix(paths[[i]])
     results$Frontal_Frontal[i] <- region_connectivity(mat, frontal)
@@ -44,13 +50,17 @@ for (i in seq_along(paths)) {
 print(results)
 
 
+# Save base R barplot as PDF
 
+# Open PDF device
 pdf("Q4_region_connectivity_barlot.png", width = 10, height = 8)
 
+# Create matrix for barplot: rows = regions, columns = conditions
 mat <- t(as.matrix(results[, c("Frontal_Frontal", "Posterior_Posterior")]))
 colnames(mat) <- results$Condition
 rownames(mat) <- c("Frontal-Frontal", "Posterior-Posterior")
 
+# Make grouped barplot
 barplot(mat,
         beside = TRUE,           
         col = c("dodgerblue3","firebrick2"),

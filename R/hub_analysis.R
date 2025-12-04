@@ -1,7 +1,12 @@
+# Hub Electrode Analysis
+# Research Question 1: Which electrodes act as hubs during meditation compared to thinking?
+# This script identifies hub electrodes using degree, strength, and betweenness centrality
+# averaged across multiple density thresholds (10%, 15%, 20%, 25%).
 
 library(igraph)
 library(dplyr)
 
+# load matrix from csv
 load_matrix <- function(path) {
     df <- read.csv(path, header = TRUE, check.names = FALSE)
     rownames(df) <- df[,1]
@@ -12,6 +17,7 @@ load_matrix <- function(path) {
     return(mat)
 }
 
+# keep top x% edges (density thresholding)
 keep_top_density <- function(mat, dens) {
     diag(mat) <- 0
     mat[is.na(mat)] <- 0
@@ -32,6 +38,7 @@ keep_top_density <- function(mat, dens) {
 
 densities <- c(0.10, 0.15, 0.20, 0.25)
 
+# Hub analysis function - compute centrality measures averaged across densities
 hub_analysis <- function(mat, name) {
     cat("\nProcessing:", name, "\n")
 
@@ -88,6 +95,7 @@ hub_analysis <- function(mat, name) {
     return(hub_df)
 }
 
+# File paths
 paths <- list(
     alpha_med1     = "src/results/averages/alpha_med1breath/alpha_med1breath_wpli_average_sub1-2.csv",
     alpha_med2     = "src/results/averages/alpha_med2/alpha_med2_wpli_average_sub1-2.csv",
@@ -97,6 +105,7 @@ paths <- list(
     beta_thinking  = "src/results/averages/beta_thinking/beta_thinking_wpli_average_sub1-2.csv"
 )
 
+# Load matrices
 cat("\n===== LOADING MATRICES =====\n")
 mats <- list()
 for (path_name in names(paths)) {
@@ -109,6 +118,7 @@ for (path_name in names(paths)) {
     })
 }
 
+# ===== COMPUTE HUBS FOR ALL CONDITIONS =====
 cat("\n===== HUB ELECTRODES ANALYSIS (AVERAGED ACROSS 10%, 15%, 20%, 25%) =====\n")
 
 hubs_by_condition <- list()
@@ -134,6 +144,7 @@ for (name in names(mats)) {
     }
 }
 
+# ===== ALPHA BAND COMPARISON =====
 cat("\n\n===== ALPHA BAND COMPARISON =====\n")
 cat("\nAlpha Thinking - Top 5 hubs:\n")
 print(head(hubs_by_condition$alpha_thinking, 5))
@@ -142,6 +153,7 @@ print(head(hubs_by_condition$alpha_med1, 5))
 cat("\nAlpha Meditation 2 - Top 5 hubs:\n")
 print(head(hubs_by_condition$alpha_med2, 5))
 
+# ===== BETA BAND COMPARISON =====
 cat("\n\n===== BETA BAND COMPARISON =====\n")
 cat("\nBeta Thinking - Top 5 hubs:\n")
 print(head(hubs_by_condition$beta_thinking, 5))
@@ -150,6 +162,7 @@ print(head(hubs_by_condition$beta_med1, 5))
 cat("\nBeta Meditation 2 - Top 5 hubs:\n")
 print(head(hubs_by_condition$beta_med2, 5))
 
+# ===== 1. SAVE ALL HUB RESULTS INTO A SINGLE CSV =====
 cat("\n\n===== SAVING HUB RESULTS =====\n")
 
 valid_hubs <- sum(!sapply(hubs_by_condition, is.null))
@@ -183,10 +196,12 @@ rownames(all_hubs) <- NULL
 cat("Combined hub data:", nrow(all_hubs), "total rows\n")
 cat("  Conditions included:", paste(unique(all_hubs$condition), collapse = ", "), "\n")
 
+# ===== 2. ADD BAND AND STATE LABELS =====
 all_hubs$band <- ifelse(grepl("alpha", all_hubs$condition), "alpha", "beta")
 all_hubs$state <- ifelse(grepl("thinking", all_hubs$condition), "thinking", "meditation")
 cat("Added band and state labels\n")
 
+# ===== 3. ADD ELECTRODE REGION LABELS =====
 region_map <- list(
     frontal = c("Fp1","Fp2","F3","F4","F7","F8","Fz","AF3","AF4","AF7","AF8"),
     central = c("C3","C4","Cz","CP1","CP2","CP3","CP4","CP5","CP6"),
@@ -206,6 +221,7 @@ all_hubs$region <- sapply(all_hubs$electrode, get_region)
 cat("Added electrode region labels\n")
 cat("  Regions found:", paste(unique(all_hubs$region), collapse = ", "), "\n")
 
+# Save combined hub table
 write.csv(
     all_hubs,
     "src/results/hubs/all_hub_metrics_multi_density.csv",
@@ -213,6 +229,7 @@ write.csv(
 )
 cat("Saved: all_hub_metrics_multi_density.csv\n")
 
+# ===== 4. EXPORT TOP 5 HUBS PER CONDITION =====
 cat("\n===== EXPORTING TOP 5 HUBS =====\n")
 
 top5_list <- list()
@@ -243,6 +260,7 @@ for (name in names(top5_list)) {
 }
 cat("Saved: top5_*.csv for each condition\n")
 
+# ===== 5. REGION SUMMARY ANALYSIS =====
 cat("\n===== REGION SUMMARY ANALYSIS =====\n")
 
 region_summary <- all_hubs %>%
@@ -264,10 +282,12 @@ cat("Saved: region_summary.csv\n")
 cat("\nRegion Summary:\n")
 print(region_summary)
 
+# ===== 6. VISUALIZATIONS =====
 cat("\n===== GENERATING VISUALIZATIONS =====\n")
 
 dir.create("src/results/hubs/plots", recursive = TRUE, showWarnings = FALSE)
 
+# Plot 1: Top 5 hubs per condition (strength barplot)
 pdf("src/results/hubs/plots/top5_hubs_per_condition.pdf", width = 14, height = 10)
 par(mfrow = c(2, 3))
 for (name in names(top5_list)) {
@@ -286,6 +306,7 @@ for (name in names(top5_list)) {
 dev.off()
 cat("Saved: top5_hubs_per_condition.pdf\n")
 
+# Plot 2: Region distribution of hubs
 pdf("src/results/hubs/plots/hub_region_distribution.pdf", width = 10, height = 6)
 region_counts <- all_hubs %>%
     group_by(band, state, region) %>%
@@ -326,6 +347,7 @@ legend("topright", legend = rownames(beta_mat), fill = c("red","blue"))
 dev.off()
 cat("Saved: hub_region_distribution.pdf\n")
 
+# Plot 3: Strength comparison - Meditation vs Thinking
 pdf("src/results/hubs/plots/meditation_vs_thinking_strength.pdf", width = 12, height = 6)
 par(mfrow = c(1, 2))
 alpha_med <- all_hubs %>% filter(band == "alpha", state == "meditation") %>% arrange(-strength) %>% head(10)
