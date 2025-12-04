@@ -2,7 +2,7 @@
 
 library(igraph)
 
-# Load adjacency matrix from CSV -----------------------------
+# Load adjacency matrix from CSV 
 load_matrix <- function(path) {
     df <- read.csv(path, header = TRUE, check.names = FALSE)
     rownames(df) <- df[,1]
@@ -13,7 +13,7 @@ load_matrix <- function(path) {
     return(mat)
 }
 
-# Network metrics (global) -----------------------------------
+# Network metrics (global) 
 network_metrics <- function(g) {
     data.frame(
         mean_strength = mean(strength(g)),
@@ -23,7 +23,7 @@ network_metrics <- function(g) {
     )
 }
 
-# Keep top X% edges (density thresholding) -------------------
+# Keep top X% edges (density thresholding)
 keep_top_density <- function(mat, dens) {
     diag(mat) <- 0
     mat[is.na(mat)] <- 0
@@ -42,10 +42,10 @@ keep_top_density <- function(mat, dens) {
     return(mat_thr)
 }
 
-# Densities to average across --------------------------------
+# Densities to average across 
 densities <- c(0.10, 0.15, 0.20, 0.25)
 
-# Paths to your six matrices ---------------------------------
+# Paths to your six matrices 
 paths <- list(
     alpha_med1     = "src/results/averages/alpha_med1breath/alpha_med1breath_wpli_average_sub1-2.csv",
     alpha_med2     = "src/results/averages/alpha_med2/alpha_med2_wpli_average_sub1-2.csv",
@@ -55,10 +55,10 @@ paths <- list(
     beta_thinking  = "src/results/averages/beta_thinking/beta_thinking_wpli_average_sub1-2.csv"
 )
 
-# Load matrices ----------------------------------------------
+# Load matrices
 mats <- lapply(paths, load_matrix)
 
-# Compute final metrics --------------------------------------
+# Compute final metrics
 final_results <- data.frame(
     condition = character(),
     mean_strength = numeric(),
@@ -77,7 +77,7 @@ for (name in names(mats)) {
         metric_rows[[as.character(d)]] <- network_metrics(g_d)
     }
 
-    # Combine → average across densities
+
     M <- do.call(rbind, metric_rows)
     avg_row <- colMeans(M[, sapply(M, is.numeric)], na.rm = TRUE)
 
@@ -89,7 +89,7 @@ for (name in names(mats)) {
 }
 
 # Print table 
-cat("\n===== FINAL GLOBAL METRIC RESULTS (Average across densities) =====\n")
+cat("Global metric results (avg across densities)")
 
 # Round only numeric columns
 final_results_rounded <- final_results
@@ -110,11 +110,8 @@ barplot(
 )
 
 
-# ===============================
-# BASE R BAR PLOTS + SAVING
-# ===============================
 
-# ----------- 1. Save Modularity Barplot -----------
+# modularity barplot
 
 png("modularity_barplot.png", width = 1400, height = 900, res = 150)
 barplot(
@@ -141,7 +138,7 @@ barplot(
 dev.off()
 
 
-# ----------- 2. Save Clustering Barplot -----------
+# clustering barplot
 
 png("clustering_barplot.png", width = 1400, height = 900, res = 150)
 barplot(
