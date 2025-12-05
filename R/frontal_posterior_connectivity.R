@@ -1,6 +1,6 @@
 library(igraph)
 
-# load matrix from csv file
+# load matrix from csv file (the csv files contain the averages across all the participants)
 load_matrix <- function(path) {
     df <- read.csv(path, header = TRUE, check.names = FALSE)
     rownames(df) <- df[,1] # first column contains the names
@@ -25,7 +25,7 @@ paths <- list(
     beta_thinking = "src/results/averages/beta_thinking/beta_thinking_wpli_average_sub1-2.csv"
 )
 
-
+# exact same function defined in analysis.R
 keep_top_density <- function(mat, dens) {
     diag(mat) <- 0
     mat[is.na(mat)] <- 0
@@ -46,77 +46,27 @@ keep_top_density <- function(mat, dens) {
 
 # compute the frontal-posterior connectivity
 fp_connectivity <- function(mat, frontal, posterior, densities = c(0.1, 0.15, 0.2, 0.25)) {
-    fp_vals <- c()
+    fp_values <- c()
 
     for (d in densities) {
-        mat_d <- keep_top_density(mat, d)
+        threshold_matrix <- keep_top_density(mat, d)
 
-        channels <- rownames(mat_d)
-        f_ids <- which(channels %in% frontal)
-        p_ids <- which(channels %in% posterior)
+        f_ids <- which(rownames(threshold_matrix) %in% frontal)
+        p_ids <- which(rownames(threshold_matrix) %in% posterior)
 
-        submat <- mat_d[f_ids, p_ids, drop = FALSE]
+        fp_sub <- threshold_matrix[f_ids, p_ids, drop = FALSE]
+        values <- fp_sub[fp_sub > 0]
 
-        val <- mean(submat[submat > 0], na.rm = TRUE)
-        if (is.nan(val)) val <- 0
-        fp_vals <- c(fp_vals, val)
+        if (length(values) == 0) {
+            fp_values <- c(fp_values, 0)
+        }
+        else {
+            fp_values <- c(fp_values, mean(values))
+        }
     }
 
-    return(mean(fp_vals, na.rm = TRUE))
+    return(mean(fp_values))
 }
-
-# run code for all groups
-results <- data.frame(
-    Condition = names(paths),
-    FP_connectivity = NA
-)
-
-for (i in seq_along(paths)) {
-    name <- names(paths)[i]
-    mat <- load_matrix(paths[[i]])
-    fp <- fp_connectivity(mat, frontal, posterior)
-    results$FP_connectivity[i] <- fp
-}
-
-# print the results
-cat("\n===== Frontal-Posterior Connectivity Results =====\n")
-print(results)
-
-
-# plotting cool graphs fr
-# this function plots the entire network, all edges, not just FP
-# Not needed for FP analysis, but useful for comparison
-# To run it
-plot_brain_regions <- function(mat, frontal, posterior, title = "Network") {
-    g <- graph_from_adjacency_matrix(mat, mode = "undirected", weighted = TRUE)
-
-    channels <- rownames(mat)
-
-    # assigning colours
-    col <- rep("gray70", length(channels))
-    col[channels %in% frontal] <- "blue"
-    col[channels %in% posterior] <- "red"
-
-    # node sizes
-    vs <- rep(5, length(channels))
-
-    # frontal is blue, posterior is red, gray maps to other regions in the brain (central, temporal, etc.)
-    plot(
-        g,
-        vertex.color = col,
-        vertex.size = vs,
-        vertex.label.cex = 0.6,
-        vertex.label.color = "black",
-        edge.width = sqrt(E(g)$weight) * 2,
-        edge.color = "gray80",
-        layout = layout_in_circle,
-        main = title
-    )
-}
-
-# to see the brain regions plot
-mat <- load_matrix(paths$beta_thinking) # switch the path if you want a different group plotted
-plot_brain_regions(mat, frontal, posterior, title="")
 
 
 # plot the edges raw (no thresholding)
@@ -137,127 +87,85 @@ plot_fp_edges_raw <- function(mat, frontal, posterior, title="") {
     g <- graph_from_adjacency_matrix(fp_mat, mode="undirected", weighted = TRUE)
 
     # Node colors
-    col <- rep("gray80", length(channels))
-    col[f_ids] <- "dodgerblue3"
-    col[p_ids] <- "firebrick2"
+    colors <- rep("gray80", length(channels))
+    colors[f_ids] <- "dodgerblue3"
+    colors[p_ids] <- "firebrick2"
 
     plot(
         g,
-        vertex.color = col,
+        vertex.color = colors,
         vertex.size = 6,
         vertex.label = NA,
-        edge.width = sqrt(E(g)$weight) * 5,
+        edge.width = sqrt(E(g)$weight) * 4,
         edge.color = "purple",
         layout = layout_in_circle,
         main = title
     )
 }
 
-# matrix thresholding helper
-# Applies the same proportional density thresholding method used in analysis.R: sort all edges, keep only top % (10%, 15%, 20%, 25%)
-# then extracts ONLY the frontal-posterior edges from the thresholded matrix
+plot_fp_edges_thresholded <- function(mat, frontal, posterior, densities = c(0.10, 0.15, 0.20, 0.25), title = "") {
+    fp_mats <- list()
 
-# this allows the FP plots to match the team's thresholding methodology used elsewhere in the project
-threshold_fp_matrix <- function(mat, frontal, posterior, dens) {
+    for (d in densities) {
+        threshold = keep_top_density(mat, d)
 
-    n <- nrow(mat)
-    diag(mat) <- 0
-    mat[is.na(mat)] <- 0
-    mat <- (mat + t(mat)) / 2
+        f_ids <- which(rownames(threshold) %in% frontal)
+        p_ids <- which(rownames(threshold) %in% posterior)
 
-    max_edges <- n * (n-1) / 2
-    k <- round(dens * max_edges)
+        fp <- matrix(0, nrow(threshold), ncol(threshold))
+        rownames(fp) <- rownames(threshold)
+        colnames(fp) <- colnames(threshold)
 
-    ut <- mat[upper.tri(mat)]
-    thr <- sort(ut, decreasing=TRUE)[k]
+        fp[f_ids, p_ids] <- threshold[f_ids, p_ids]
+        fp[p_ids, f_ids] <- t(threshold[f_ids, p_ids])
 
-    thr_mat <- matrix(0, n, n)
-    thr_mat[mat >= thr] <- mat[mat >= thr]
-    diag(thr_mat) <- 0
+        fp_mats[[length(fp_mats) + 1]] <- fp
+    }
 
-    channels <- rownames(mat)
-    f_ids <- which(channels %in% frontal)
-    p_ids <- which(channels %in% posterior)
+    average_fp <- Reduce("+", fp_mats) / length(fp_mats)
 
-    fp_mat <- matrix(0, nrow(mat), ncol(mat))
-    rownames(fp_mat) <- channels
-    colnames(fp_mat) <- channels
+    g <- graph_from_adjacency_matrix(average_fp, mode = "undirected", weighted = TRUE)
 
-    fp_mat[f_ids, p_ids] <- thr_mat[f_ids, p_ids]
-    fp_mat[p_ids, f_ids] <- t(thr_mat[f_ids, p_ids])
-
-    return(fp_mat)
-}
-
-# thresholded plot, same thresolding as done in analysis.R
-# implements the multidensity threshold averaging
-# Thresholds the matrix at 10%, 15%, 20%, 25%, thn extracts the FP edges from it, averages the FP adjacency matrices, then plots only the strongest edges
-
-# this matches the methodology done in analysis.R
-plot_fp_edges_multidensity <- function(mat, frontal, posterior, title="") {
-
-    densities <- c(0.10, 0.15, 0.20, 0.25)
-
-    fp_mats <- lapply(densities, function(d)
-        threshold_fp_matrix(mat, frontal, posterior, d)
-    )
-
-    avg_fp_mat <- Reduce("+", fp_mats) / length(fp_mats)
-
-    g <- graph_from_adjacency_matrix(avg_fp_mat, mode="undirected", weighted=TRUE)
-
-    channels <- rownames(mat)
-    f_ids <- which(channels %in% frontal)
-    p_ids <- which(channels %in% posterior)
-
-    col <- rep("gray80", length(channels))
-    col[f_ids] <- "dodgerblue3"
-    col[p_ids] <- "firebrick2"
-
-    # highlight strongest FP edges
-    weights <- E(g)$weight
-    keep_thr <- sort(weights, decreasing=TRUE)[max(1, round(length(weights)*0.3))]
-
-    E(g)$color <- ifelse(E(g)$weight >= keep_thr, "purple", NA)
-    E(g)$width <- ifelse(E(g)$weight >= keep_thr, sqrt(E(g)$weight)*6, 0)
+    channels <- rownames(average_fp)
+    colors <- rep("gray80", length(channels))
+    colors[channels %in% frontal] <- "dodgerblue3"
+    colors[channels %in% posterior] <- "firebrick2"
 
     plot(
         g,
-        vertex.color = col,
+        vertex.color = colors,
         vertex.size = 6,
         vertex.label = NA,
+        edge_width = sqrt(E(g)$weight) * 6,
+        edge.color = "pruple",
         layout = layout_in_circle,
         main = title
     )
 }
 
+results <- data.frame(Condition=names(paths), FP_connectivity=NA)
+
+# Thresholded FP metric
+for (i in seq_along(paths)) {
+    mat <- load_matrix(paths[[i]])
+    results$FP_connectivity[i] <- fp_connectivity(mat, frontal, posterior)
+}
+
+print(results)
 
 png("fp_raw_6panel.png", width=3000, height=2000, res=250)
-par(mfrow=c(2,3))
-par(mar=c(1,1,2,1))
-par(oma=c(3,0,3,0)) 
+par(mfrow=c(2,3), mar=c(1,1,2,1))
 
 for (name in names(paths)) {
-    mat <- load_matrix(paths[[name]])
-    plot_fp_edges_raw(mat, frontal, posterior, title=name)
+    plot_fp_edges_raw(load_matrix(paths[[name]]), frontal, posterior, title=name)
 }
-
-mtext("Raw Frontal–Posterior Connectivity (All FP Edges, No Thresholding)",
-      outer=TRUE, cex=2.2, font=2)
-
 dev.off()
 
-png("fp_thresholded_multidensity_6panel.png", width=3000, height=2000, res=250)
-par(mfrow=c(2,3))
-par(mar=c(1,1,2,1))
-par(oma=c(3,0,3,0)) 
+
+png("fp_thresholded_6panel.png", width=3000, height=2000, res=250)
+par(mfrow=c(2,3), mar=c(1,1,2,1))
 
 for (name in names(paths)) {
-    mat <- load_matrix(paths[[name]])
-    plot_fp_edges_multidensity(mat, frontal, posterior, title=name)
+    plot_fp_edges_thresholded(load_matrix(paths[[name]]), frontal, posterior, title=name)
 }
-
-mtext("Frontal–Posterior Connectivity (Multi-Density Thresholding: 10–25%)",
-      outer=TRUE, cex=2.2, font=2)
-
 dev.off()
