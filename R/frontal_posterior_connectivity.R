@@ -1,16 +1,9 @@
 library(igraph)
 
-# load matrix from csv file (the csv files contain the averages across all the participants)
-load_matrix <- function(path) {
-    df <- read.csv(path, header = TRUE, check.names = FALSE)
-    rownames(df) <- df[,1] # first column contains the names
-    df <- df[,-1]
-
-    mat <- as.matrix(df)
-    mat <- apply(mat, 2, as.numeric)
-    rownames(mat) <- rownames(df)
-    return(mat)
-}
+source("R/analysis.R")
+exists("keep_top_density")
+exists("network_metrics")
+exists("load_matrix")
 
 # define the frontal and posterior electrodes (basically figure out whether an electrode is part of the frontal or posterior part of the brain)
 frontal <- c("Fp1","Fp2","AF3","AF4","F3","F4","F7","F8","Fz")
@@ -25,24 +18,6 @@ paths <- list(
     beta_thinking = "src/results/averages/beta_thinking/beta_thinking_wpli_average_sub1-2.csv"
 )
 
-# exact same function defined in analysis.R
-keep_top_density <- function(mat, dens) {
-    diag(mat) <- 0
-    mat[is.na(mat)] <- 0
-    mat <- (mat + t(mat)) / 2
-
-    n <- nrow(mat)
-    max_edges <- n * (n - 1) / 2
-    k <- round(dens * max_edges)
-
-    ut <- mat[upper.tri(mat)]
-    thr <- sort(ut, decreasing = TRUE)[k]
-
-    mat_thr <- matrix(0, n, n)
-    mat_thr[mat >= thr] <- mat[mat >= thr]
-    diag(mat_thr) <- 0
-    return(mat_thr)
-}
 
 # compute the frontal-posterior connectivity
 fp_connectivity <- function(mat, frontal, posterior, densities = c(0.1, 0.15, 0.2, 0.25)) {
@@ -107,7 +82,7 @@ plot_fp_edges_thresholded <- function(mat, frontal, posterior, densities = c(0.1
     fp_mats <- list()
 
     for (d in densities) {
-        threshold = keep_top_density(mat, d)
+        threshold <- keep_top_density(mat, d)
 
         f_ids <- which(rownames(threshold) %in% frontal)
         p_ids <- which(rownames(threshold) %in% posterior)
@@ -136,8 +111,8 @@ plot_fp_edges_thresholded <- function(mat, frontal, posterior, densities = c(0.1
         vertex.color = colors,
         vertex.size = 6,
         vertex.label = NA,
-        edge_width = sqrt(E(g)$weight) * 6,
-        edge.color = "pruple",
+        edge.width = sqrt(E(g)$weight) * 6,
+        edge.color = "purple",
         layout = layout_in_circle,
         main = title
     )
