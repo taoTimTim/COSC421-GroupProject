@@ -237,14 +237,32 @@ mk <- function(band_label) {
 alpha_mat <- mk("alpha"); beta_mat <- mk("beta")
 par(mfrow = c(1, 2))
 if (length(alpha_mat)) {
-    barplot(alpha_mat, beside = TRUE, col = c("steelblue","skyblue3","coral")[seq_len(nrow(alpha_mat))], main = "Alpha Band: Hub Distribution by Region", ylab = "Number of Hub Electrodes", las = 2)
-    legend("topright", legend = rownames(alpha_mat), fill = c("steelblue","skyblue3","coral")[seq_len(nrow(alpha_mat))])
+    cols_alpha <- c("steelblue","skyblue3","coral")[seq_len(nrow(alpha_mat))]
+    barplot(alpha_mat, beside = TRUE, col = cols_alpha, main = "Alpha Band: Hub Distribution by Region", ylab = "Number of Hub Electrodes", las = 2)
+    usr <- par("usr")
+    dx <- usr[2] - usr[1]; dy <- usr[4] - usr[3]
+    legend(x = usr[1] + 0.02 * dx,
+           y = usr[4] + 0.08 * dy,
+           legend = rownames(alpha_mat),
+           fill = cols_alpha,
+           xpd = NA,
+           horiz = TRUE,
+           bg = "white")
 } else {
     plot.new(); title(main = "Alpha: no data")
 }
 if (length(beta_mat)) {
-    barplot(beta_mat, beside = TRUE, col = c("steelblue","skyblue3","coral")[seq_len(nrow(beta_mat))], main = "Beta Band: Hub Distribution by Region", ylab = "Number of Hub Electrodes", las = 2)
-    legend("topright", legend = rownames(beta_mat), fill = c("steelblue","skyblue3","coral")[seq_len(nrow(beta_mat))])
+    cols_beta <- c("steelblue","skyblue3","coral")[seq_len(nrow(beta_mat))]
+    barplot(beta_mat, beside = TRUE, col = cols_beta, main = "Beta Band: Hub Distribution by Region", ylab = "Number of Hub Electrodes", las = 2)
+    usr <- par("usr")
+    dx <- usr[2] - usr[1]; dy <- usr[4] - usr[3]
+    legend(x = usr[1] + 0.02 * dx,
+           y = usr[4] + 0.08 * dy,
+           legend = rownames(beta_mat),
+           fill = cols_beta,
+           xpd = NA,
+           horiz = TRUE,
+           bg = "white")
 } else {
     plot.new(); title(main = "Beta: no data")
 }
