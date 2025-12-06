@@ -77,19 +77,14 @@ for (name in names(mats)) {
         metric_rows[[as.character(d)]] <- network_metrics(g_d)
     }
 
-
     M <- do.call(rbind, metric_rows)
     avg_row <- colMeans(M[, sapply(M, is.numeric)], na.rm = TRUE)
 
+    final_results <- rbind(final_results,data.frame(condition = name,t(avg_row),row.names = NULL))
 
-    final_results <- rbind(final_results,
-                           data.frame(condition = name,
-                                      t(avg_row),
-                                      row.names = NULL))
-}
+    }
 
 # Print table 
-cat("Global metric results (avg across densities)")
 
 # Round only numeric columns
 final_results_rounded <- final_results
@@ -97,19 +92,6 @@ numeric_cols <- sapply(final_results_rounded, is.numeric)
 final_results_rounded[, numeric_cols] <- round(final_results_rounded[, numeric_cols], 4)
 
 print(final_results_rounded)
-
-
-# Base R barplot for modularity
-barplot(
-    height = final_results$modularity,
-    names.arg = final_results$condition,
-    las = 2,
-    main = "Modularity Across Conditions",
-    ylab = "Modularity",
-    cex.names = 0.8
-)
-
-
 
 # modularity barplot
 

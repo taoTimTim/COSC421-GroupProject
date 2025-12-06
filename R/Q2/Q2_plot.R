@@ -9,8 +9,6 @@ library(gridExtra)
 #loading the eeg cordinates 
 coords <- read.csv("R/Q2/eeg_64coords.csv")
 
-
-
 #load wpli matrix
 load_matrix <- function(path) {
   df <- read.csv(path, header = TRUE, check.names = FALSE)
@@ -21,7 +19,6 @@ load_matrix <- function(path) {
   rownames(m) <- rownames(df)
   return(m)
 }
-
 
 # threshold function
 keep_top_density <- function(mat, dens) {
@@ -52,7 +49,6 @@ keep_top_density <- function(mat, dens) {
 
 densities <- c(0.10, 0.15, 0.20, 0.25)
 
-
 #load data
 paths <- list(
   alpha_med1     = "src/results/averages/alpha_med1breath/alpha_med1breath_wpli_average_sub1-2.csv",
@@ -64,7 +60,6 @@ paths <- list(
 )
 
 mats <- lapply(paths, load_matrix)
-
 labels <- rownames(mats[[1]])
 mats <- lapply(mats, function(m) m[labels, labels])
 coords <- coords[match(labels, coords$electrode), ]
@@ -73,16 +68,12 @@ coords <- coords[match(labels, coords$electrode), ]
 #make the average graph
 build_avg_graph <- function(condition) {
   W <- mats[[condition]]
-  
   W_list <- list()
   for (d in densities) {
     W_list[[as.character(d)]] <- keep_top_density(W, d)
   }
-  
   W_avg <- Reduce("+", W_list) / length(densities)
-  
   g <- graph_from_adjacency_matrix(W_avg, mode = "undirected", weighted = TRUE, diag = FALSE)
-  
   V(g)$name <- labels
   V(g)$x <- coords$x
   V(g)$y <- coords$y
@@ -102,21 +93,14 @@ build_avg_graph <- function(condition) {
 
 print_metrics <- function(condition) {
     W <- mats[[condition]]
-    
     W_list <- lapply(densities, function(d) keep_top_density(W, d))
     W_avg <- Reduce("+", W_list) / length(densities)
-
     g <- graph_from_adjacency_matrix(W_avg, mode = "undirected", weighted = TRUE, diag = FALSE)
-
     cl <- transitivity(g, type = "localundirected", weights = E(g)$weight)
     cl[is.na(cl)] <- 0
-
     avg_clust <- mean(cl)
     mod_val <- modularity(cluster_louvain(g, weights = E(g)$weight))
-
-    cat("\nCondition:", condition,
-        "\n  Average clustering:", round(avg_clust, 4),
-        "\n  Modularity:", round(mod_val, 4), "\n")
+    cat("\nCondition:", condition, "\n  Average clustering:", round(avg_clust, 4), "\n  Modularity:", round(mod_val, 4), "\n")
 }
 
 
@@ -147,15 +131,11 @@ plot_condition <- function(condition, title_prefix = "") {
 #save the graph 
 save_plot_condition <- function(condition, prefix = "", width = 7, height = 6, dpi = 300) {
   p <- plot_condition(condition, prefix)
-  
   safe_prefix <- gsub("[^A-Za-z0-9_-]", "", prefix)
-  
-  filename_png <- paste0(safe_prefix, condition, ".png") #getting the png file of the graph 
+  filename_png <- paste0(safe_prefix, condition, ".png") 
   filename_pdf <- paste0(safe_prefix, condition, ".pdf")
-  
   ggsave(filename_png, p, width = width, height = height, dpi = dpi, bg = "white")
   ggsave(filename_pdf, p, width = width, height = height)
-  
   message("Saved: ", filename_png, " and ", filename_pdf)
 }
 
