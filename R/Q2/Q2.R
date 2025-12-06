@@ -140,26 +140,26 @@ dev.off()
 
 # clustering barplot
 
-# png("clustering_barplot.png", width = 1400, height = 900, res = 150)
-# barplot(
-#     height = final_results$clustering,
-#     names.arg = final_results$condition,
-#     las = 2,
-#     main = "Clustering Across Conditions",
-#     ylab = "Clustering Coefficient",
-#     col = "palegreen3",
-#     cex.names = 0.8
-# )
-# dev.off()
+png("clustering_barplot.png", width = 1400, height = 900, res = 150)
+barplot(
+    height = final_results$clustering,
+    names.arg = final_results$condition,
+    las = 2,
+    main = "Clustering Across Conditions",
+    ylab = "Clustering Coefficient",
+    col = "palegreen3",
+    cex.names = 0.8
+)
+dev.off()
 
-# pdf("clustering_barplot.pdf", width = 10, height = 6)
-# barplot(
-#     height = final_results$clustering,
-#     names.arg = final_results$condition,
-#     las = 2,
-#     main = "Clustering Across Conditions",
-#     ylab = "Clustering Coefficient",
-#     col = "palegreen3",
-#     cex.names = 0.8
-# )
-# dev.off()
+pdf("clustering_barplot.pdf", width = 10, height = 6)
+barplot(
+    height = final_results$clustering,
+    names.arg = final_results$condition,
+    las = 2,
+    main = "Clustering Across Conditions",
+    ylab = "Clustering Coefficient",
+    col = "palegreen3",
+    cex.names = 0.8
+)
+dev.off()

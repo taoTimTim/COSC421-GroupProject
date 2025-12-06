@@ -162,13 +162,13 @@ save_plot_condition <- function(condition, prefix = "", width = 7, height = 6, d
 
 #save all plots
 
-#save_plot_condition("alpha_med1", "Alpha_")
-#save_plot_condition("alpha_med2", "Alpha_")
-#save_plot_condition("alpha_thinking", "Alpha_")
+save_plot_condition("alpha_med1", "Alpha_")
+save_plot_condition("alpha_med2", "Alpha_")
+save_plot_condition("alpha_thinking", "Alpha_")
 
-#save_plot_condition("beta_med1", "Beta_")
-#save_plot_condition("beta_med2", "Beta_")
-#save_plot_condition("beta_thinking", "Beta_")
+save_plot_condition("beta_med1", "Beta_")
+save_plot_condition("beta_med2", "Beta_")
+save_plot_condition("beta_thinking", "Beta_")
 
 print_metrics("alpha_med1")
 print_metrics("alpha_med2")
