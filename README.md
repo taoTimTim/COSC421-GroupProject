@@ -28,6 +28,10 @@ python src/module_name.py
 
 
 ## Data 
+Add bdf data to the data folder but should not be commited to gihub. Notes the data folder is in the .gitignore file so don't store data outside of it.
+
+
+##  
 This project uses EEG data originally stored as .bdf files. The combined files are approximately 50 GB and cannot be uploaded to GitHub due to size limitations.
 The original raw EEG dataset can be downloaded from: https://openneuro.org/datasets/ds003969/versions/1.0.0
 
