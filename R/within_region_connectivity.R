@@ -53,7 +53,7 @@ print(results)
 # Save base R barplot as PDF
 
 # Open PDF device
-pdf("Q4_region_connectivity_barlot.png", width = 10, height = 8)
+pdf("region_connectivity_barlot.pdf", width = 10, height = 8)
 
 # Create matrix for barplot: rows = regions, columns = conditions
 mat <- t(as.matrix(results[, c("Frontal_Frontal", "Posterior_Posterior")]))
