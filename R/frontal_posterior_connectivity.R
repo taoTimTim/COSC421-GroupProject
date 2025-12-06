@@ -43,6 +43,15 @@ fp_connectivity <- function(mat, frontal, posterior, densities = c(0.1, 0.15, 0.
     return(mean(fp_values))
 }
 
+fp_connectivity_unthresholded <- function(mat, frontal, posterior) {
+    f_ids <- which(rownames(mat) %in% frontal)
+    p_ids <- which(rownames(mat) %in% posterior)
+
+    fp_vals <- mat[f_ids, p_ids]
+
+    return(mean(fp_vals))
+}
+
 
 # plot the edges raw (no thresholding)
 # This shows the full connectivity pattern that naturally exists from the raw (averaged) data in the csv files
@@ -118,7 +127,8 @@ plot_fp_edges_thresholded <- function(mat, frontal, posterior, densities = c(0.1
     )
 }
 
-results <- data.frame(Condition=names(paths), FP_connectivity=NA)
+results <- data.frame(Condition = names(paths), FP_connectivity = NA)
+results_unthresholded <- data.frame(Condition = names(paths), FP_unthresholded_connectivity = NA)
 
 # Thresholded FP metric
 for (i in seq_along(paths)) {
@@ -126,7 +136,17 @@ for (i in seq_along(paths)) {
     results$FP_connectivity[i] <- fp_connectivity(mat, frontal, posterior)
 }
 
+# unthresholded FP metrics
+for (i in seq_along(paths)) {
+    mat <- load_matrix(paths[[i]])
+    results_unthresholded$FP_unthresholded_connectivity[i] <- fp_connectivity_unthresholded(mat, frontal, posterior)
+}
+
+print("Thresholded Results:")
 print(results)
+
+print("Unthresholded Results")
+print(results_unthresholded)
 
 png("fp_raw_6panel.png", width=3000, height=2000, res=250)
 par(mfrow=c(2,3), mar=c(1,1,2,1))
@@ -143,4 +163,20 @@ par(mfrow=c(2,3), mar=c(1,1,2,1))
 for (name in names(paths)) {
     plot_fp_edges_thresholded(load_matrix(paths[[name]]), frontal, posterior, title=name)
 }
+dev.off()
+
+
+# unthresholded barplot
+png("fp_unthresholded_barplot.png", width = 1800, height = 1200, res = 200)
+par(mar = c(10, 5, 5, 2))  
+
+barplot(
+    results_unthresholded$FP_unthresholded_connectivity,
+    names.arg = results_unthresholded$Condition,
+    las = 2,
+    col = "blue",
+    ylab = "Average FP Connectivity (unthresholded wPLI)",
+    main = "Frontal-Posterior Connectivity (Unthresholded)"
+)
+
 dev.off()
