@@ -12,7 +12,7 @@ load_matrix <- function(path) {
     return(mat)
 }
 
-# Function to keep top x% edges (density thresholding)
+# density thresholding
 keep_top_density <- function(mat, dens) {
     diag(mat) <- 0
     mat[is.na(mat)] <- 0
@@ -58,7 +58,7 @@ paths <- list(
 mats <- lapply(paths, load_matrix)
 
 
-# store binary matrices for similarity later
+# store binary matrices for similarity 
 binary_mats_by_thresh <- list()
 
 
@@ -100,7 +100,7 @@ for (i in seq_along(pairs)) {
     similarity_results$Avg_Similarity[i] <- mean(sims)
 }
 
-print("=== AVERAGE PEARSON SIMILARITY (MEDITATION VS THINKING) ===")
+print("average pearson similarities")
 print(similarity_results)
 
 
