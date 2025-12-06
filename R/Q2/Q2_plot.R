@@ -169,12 +169,3 @@ save_plot_condition("alpha_thinking", "Alpha_")
 save_plot_condition("beta_med1", "Beta_")
 save_plot_condition("beta_med2", "Beta_")
 save_plot_condition("beta_thinking", "Beta_")
-
-print_metrics("alpha_med1")
-print_metrics("alpha_med2")
-print_metrics("alpha_thinking")
-
-
-print_metrics("beta_med1")
-print_metrics("beta_med2")
-print_metrics("beta_thinking")
